@@ -1,0 +1,129 @@
+{
+    "name": "Sep-TFAnet_VAD",
+    "wandb_n": "",
+    "n_gpu": 1,
+    "arch": {
+        "type": "SeparationModel",
+        "args": {
+            "n_fftBins": 512,
+            "BN_dim": 256,
+            "H_dim": 512,
+            "layer": 8,
+            "stack": 3,
+            "kernel": 3,
+            "num_spk": 2,
+            "skip": false,
+            "dilated": true,
+            "casual": false,
+            "bool_drop": true,
+            "drop_value": 0.05,
+            "weight_norm": true,
+            "final_vad": true,
+            "final_vad_masked_speakers": false,
+            "noisy_phase": true,
+            "activity_input_bool": true,
+            "tf_attention": true,
+            "apply_recursive_ln": true,
+            "apply_residual_ln": false
+        }
+    },
+    "data_loader": {
+        "type": "Our_DataLoader",
+        "args": {
+            "csv_file": "/dsi/gannot-lab1/datasets/mordehay/data_wham_partial_overlap/train/csv_files/with_wham_noise_res_more_informative_correct.csv",
+            "csd_labels_freq": "/dsi/gannot-lab1/datasets/mordehay/data_wham_partial_overlap/train/labels_npz/",
+            "batch_size": 16,
+            "type_dataset": "realistic_data",
+            "shuffle": true,
+            "validation_split": 0.2,
+            "num_workers": 8
+        }
+    },
+    "optimizer": {
+        "type": "Adam",
+        "args": {
+            "lr": 0.001,
+            "weight_decay": 0,
+            "amsgrad": true
+        }
+    },
+    "loss_separation": {
+        "type": "PITLossWrapper",
+        "loss_func": "pairwise_neg_sisdr",
+        "perm_reduce": false,
+        "args": {
+            "pit_from": "pw_mtx"
+        }
+    },
+    "loss_vad": {
+        "type": "PITLossWrapper",
+        "loss_func": "BinaryCrossEntropyLoss_Mean",
+        "args": {
+            "pit_from": "pw_pt"
+        }
+    },
+    "combined_loss": {
+        "weight_separation_loss": 0.99,
+        "weight_vad_loss": 0.01,
+        "learn_weight_bool": false
+    },
+    "metrics": {
+        "separation": [
+            "pit_snr",
+            "pit_si_sdr"
+        ],
+        "separation_mix": [
+            "si_sdri"
+        ],
+        "vad": [
+            "pit_CE_vad"
+        ],
+        "vad_acc": [
+            "vad_accuracy"
+        ]
+    },
+    "lr_scheduler": {
+        "type": "ReduceLROnPlateau",
+        "args": {
+            "factor": 0.5,
+            "patience": 20,
+            "verbose": false
+        }
+    },
+    "trainer": {
+        "epochs": 2,
+        "accum_iter": 1,
+        "vad_decay_weight": 0.95,
+        "cs_decay_weight": 1,
+        "mse_decay_weight": 1,
+        "com_sisdr_decay_weight": 1,
+        "swa_start": 2000,
+        "save_dir": "justtry2train/",
+        "save_period": 40,
+        "verbosity": 2,
+        "max_clip": 5,
+        "monitor": "max val_pit_si_sdr",
+        "early_stop": 1000,
+        "tensorboard": true
+    },
+    "tester": {
+        "num_save_samples": 200,
+        "calibaration": {
+            "do_calibaration": false
+        },
+        "online": {
+            "online_bool": false,
+            "similarity_bool": true,
+            "l1_loss_similarity": true,
+            "si_sdr_loss_similarity": false
+        },
+        "save_test": "path to the test results (for test.py file)",
+        "csv_file_test": "the csv file for the test which include the path to the mixtures and the path to the sources and other metadata",
+        "csd_lables": "path to the csd labels for the test",
+        "type_dataset": "choose which dataset you want to test on - whamr OR realistic_data",
+        "save_test_robot": "path to the test robot results (for test_robot.py file)",
+        "path2samples_robot": "the dataset of the robot samples",
+        "path2samples_robot_dynamic": "",
+        "save_test_robot_dynamic": ""
+    }
+}
